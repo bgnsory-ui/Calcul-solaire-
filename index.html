@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurateur Solaire Autonome</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #2980b9;
+            --accent: #27ae60;
+            --warning: #e67e22;
+            --danger: #e74c3c;
+            --light: #f4f7f6;
+        }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 1100px; margin: 0 auto; padding: 20px; background-color: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 2rem; text-align: center; border-radius: 12px; margin-bottom: 2rem; }
+        
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        h2 { color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        
+        /* Tableau Audit */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        input[type="number"], input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-add { background: var(--secondary); color: white; margin-bottom: 10px; }
+        .btn-remove { background: var(--danger); color: white; padding: 5px 10px; }
+        .btn:hover { opacity: 0.8; }
+
+        /* Calculateur */
+        .grid-calc { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .result-panel { background: #e8f4f8; padding: 20px; border-radius: 8px; border-left: 5px solid var(--secondary); }
+        .big-number { font-size: 28px; font-weight: bold; color: var(--secondary); }
+        
+        .status-ok { color: var(--accent); }
+        .status-ko { color: var(--danger); }
+
+        @media (max-width: 768px) { .grid-calc { grid-template-columns: 1fr; } table { display: block; overflow-x: auto; } }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Configurateur Solaire Intelligent</h1>
+    <p>Calculez votre consommation et votre autonomie en quelques clics</p>
+</header>
+
+<section class="card">
+    <h2>1. Audit de Consommation Électrique</h2>
+    <p>Ajoutez vos appareils pour calculer votre besoin quotidien total.</p>
+    <table id="table-appareils">
+        <thead>
+            <tr>
+                <th>Appareil</th>
+                <th>Puissance (Watts)</th>
+                <th>Utilisation (Heures/jour)</th>
+                <th>Total (Wh/j)</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="body-audit">
+            <tr>
+                <td><input type="text" value="Réfrigérateur" placeholder="Nom..."></td>
+                <td><input type="number" class="pwr" value="150" oninput="calculerGlobal()"></td>
+                <td><input type="number" class="hrs" value="24" oninput="calculerGlobal()"></td>
+                <td class="row-total">3600</td>
+                <td><button class="btn btn-remove" onclick="supprimerLigne(this)">✕</button></td>
+            </tr>
+            <tr>
+                <td><input type="text" value="Éclairage LED" placeholder="Nom..."></td>
+                <td><input type="number" class="pwr" value="20" oninput="calculerGlobal()"></td>
+                <td><input type="number" class="hrs" value="5" oninput="calculerGlobal()"></td>
+                <td class="row-total">100</td>
+                <td><button class="btn btn-remove" onclick="supprimerLigne(this)">✕</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="btn btn-add" onclick="ajouterLigne()">+ Ajouter un appareil</button>
+</section>
+
+<section class="card">
+    <h2>2. Paramètres du Système & Autonomie</h2>
+    <div class="grid-calc">
+        <div class="inputs">
+            <div style="margin-bottom: 15px;">
+                <label><b>Besoin total calculé :</b></label>
+                <div class="big-number"><span id="total-conso-display">3700</span> Wh/jour</div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label>Capacité de la Batterie (Wh)</label>
+                <input type="number" id="batterie-wh" value="5000" oninput="calculerGlobal()">
+                <small>Ex: Batterie 12V 200Ah = 2400 Wh</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label>Type de Batterie (Décharge max)</label>
+                <select id="dod-select" onchange="calculerGlobal()">
+                    <option value="0.9">Lithium / LiFePO4 (90%)</option>
+                    <option value="0.8">Lithium Standard (80%)</option>
+                    <option value="0.5">Plomb / AGM (50%)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label>Production Solaire (Wh/jour)</label>
+                <input type="number" id="prod-solaire" value="4000" oninput="calculerGlobal()">
+            </div>
+        </div>
+
+        <div class="result-panel">
+            <h3>Résultats de l'analyse</h3>
+            
+            <p>Autonomie pure (sans soleil) :<br>
+            <span class="big-number" id="res-autonomie">0.00 jours</span></p>
+            
+            <p>Bilan énergétique quotidien :<br>
+            <span class="big-number" id="res-bilan">+0 Wh</span></p>
+            
+            <div id="diagnostic" style="font-weight: bold; margin-top: 20px; padding: 10px; border-radius: 4px; background: white;">
+                Analyse du système...
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function ajouterLigne() {
+    const tbody = document.getElementById('body-audit');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" placeholder="Appareil..."></td>
+        <td><input type="number" class="pwr" value="0" oninput="calculerGlobal()"></td>
+        <td><input type="number" class="hrs" value="0" oninput="calculerGlobal()"></td>
+        <td class="row-total">0</td>
+        <td><button class="btn btn-remove" onclick="supprimerLigne(this)">✕</button></td>
+    `;
+    tbody.appendChild(row);
+    calculerGlobal();
+}
+
+function supprimerLigne(btn) {
+    btn.parentElement.parentElement.remove();
+    calculerGlobal();
+}
+
+function calculerGlobal() {
+    let totalConso = 0;
+    const lignes = document.querySelectorAll('#body-audit tr');
+
+    // 1. Calcul de la conso par ligne
+    lignes.forEach(ligne => {
+        const pwr = parseFloat(ligne.querySelector('.pwr').value) || 0;
+        const hrs = parseFloat(ligne.querySelector('.hrs').value) || 0;
+        const subtotal = pwr * hrs;
+        ligne.querySelector('.row-total').innerText = subtotal.toFixed(0);
+        totalConso += subtotal;
+    });
+
+    document.getElementById('total-conso-display').innerText = totalConso.toFixed(0);
+
+    // 2. Calcul autonomie
+    const capa = parseFloat(document.getElementById('batterie-wh').value) || 0;
+    const dod = parseFloat(document.getElementById('dod-select').value);
+    const prod = parseFloat(document.getElementById('prod-solaire').value) || 0;
+
+    const autonomie = totalConso > 0 ? (capa * dod) / totalConso : 0;
+    document.getElementById('res-autonomie').innerText = autonomie.toFixed(2) + " jours";
+
+    // 3. Bilan
+    const bilan = prod - totalConso;
+    const resBilan = document.getElementById('res-bilan');
+    resBilan.innerText = (bilan > 0 ? "+" : "") + bilan.toFixed(0) + " Wh/jour";
+    resBilan.className = "big-number " + (bilan >= 0 ? "status-ok" : "status-ko");
+
+    // 4. Diagnostic
+    const diag = document.getElementById('diagnostic');
+    if (totalConso === 0) {
+        diag.innerHTML = "ℹ️ Ajoutez des appareils pour l'analyse.";
+        diag.style.color = "gray";
+    } else if (bilan < 0) {
+        diag.innerHTML = "⚠️ Déficit ! Votre batterie finira par se vider. Augmentez les panneaux.";
+        diag.style.color = "var(--danger)";
+    } else {
+        diag.innerHTML = "✅ Système équilibré. Votre production couvre vos besoins.";
+        diag.style.color = "var(--accent)";
+    }
+}
+
+// Lancer le calcul au démarrage
+window.onload = calculerGlobal;
+</script>
+
+</body>
+</html>
